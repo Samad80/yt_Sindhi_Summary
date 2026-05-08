@@ -8,14 +8,12 @@ A web app that extracts a YouTube transcript, summarizes it into 3 bullet points
 ## 🏗 Project Structure
 
 ```
-sindhu/
-├── backend/
-│   ├── main.py          ← FastAPI app + routes
-│   ├── index.html       ← Frontend UI (must be in backend/ folder)
-│   ├── transcript.py    ← YouTube transcript extraction + chunking
-│   └── summarizer.py    ← Gemini API: summarize → Sindhi translate
-├── requirements.txt
-└── README.md
+ sindhu/
+ ├── main.py
+ ├── index.html
+ ├── transcript.py
+ ├── summarizer.py
+ └── requirements.txt
 ```
 
 ---
