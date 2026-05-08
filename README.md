@@ -9,12 +9,10 @@ Extracts a YouTube transcript, summarizes it, and translates into natural conver
 
 ```
 yt-sindhi-summarizer/
-├── backend/
-│   ├── main.py          ← FastAPI app + routes
-│   ├── transcript.py    ← YouTube transcript extraction + chunking
-│   └── summarizer.py    ← Local LLM: summarize → Sindhi translate
-├── frontend/
-│   └── index.html       ← Single-page Ajrak-themed UI
+├── main.py          ← FastAPI app + routes
+├── transcript.py    ← YouTube transcript extraction + chunking
+└── summarizer.py    ← Local LLM: summarize → Sindhi translate
+└── index.html       ← Single-page Ajrak-themed UI
 ├── requirements.txt
 └── README.md
 ```
