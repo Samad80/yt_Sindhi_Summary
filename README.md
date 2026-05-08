@@ -1,155 +1,162 @@
 # 🌊 Sindhu — YouTube Sindhi Summarizer
 ### يوٽيوب ويڊيو خلاصو — سنڌيءَ ۾
 
-Extracts a YouTube transcript, summarizes it, and translates into natural conversational **Sindhi** — powered entirely by a **local LLM** (no paid API needed).
+A web app that extracts a YouTube transcript, summarizes it into 3 bullet points, and translates into natural conversational **Sindhi** — powered by Google Gemini API (free).
 
 ---
 
 ## 🏗 Project Structure
 
 ```
-yt-sindhi-summarizer/
-├── main.py          ← FastAPI app + routes
-├── transcript.py    ← YouTube transcript extraction + chunking
-└── summarizer.py    ← Local LLM: summarize → Sindhi translate
-└── index.html       ← Single-page Ajrak-themed UI
+sindhu/
+├── backend/
+│   ├── main.py          ← FastAPI app + routes
+│   ├── index.html       ← Frontend UI (must be in backend/ folder)
+│   ├── transcript.py    ← YouTube transcript extraction + chunking
+│   └── summarizer.py    ← Gemini API: summarize → Sindhi translate
 ├── requirements.txt
 └── README.md
 ```
 
 ---
 
-## 🤖 Model: `gemma3:4b` (via Ollama)
+## ⚙️ Prerequisites
 
-**Why Gemma 3 4B?**
-- Runs on a laptop (CPU or GPU)
-- Strong multilingual ability — handles Sindhi's Arabic-Nastaliq script well
-- Instruction-tuned → reliably follows structured JSON prompts
-- ~3 GB download, fits in 8 GB RAM
-
-**Alternative:** Set `SINDHU_BACKEND=hf` to load `google/gemma-3-4b-it` directly via HuggingFace (see below).
+- Python 3.11+
+- A free **Google Gemini API key** → https://aistudio.google.com/apikey
 
 ---
 
-## 🚀 Quick Start — Ollama (Recommended)
+## 🚀 Quick Start
 
-### 1. Set up the project
+### 1. Set up virtual environment
 
 ```bash
-cd yt-sindhi-summarizer
+cd sindhu
 
-# Create virtual environment
 python -m venv .venv
 
-# Activate it
-source .venv/bin/activate        # macOS / Linux
-.venv\Scripts\activate           # Windows (Command Prompt)
-.venv\Scripts\Activate.ps1       # Windows (PowerShell)
+# Activate — Mac/Linux:
+source .venv/bin/activate
 
-# Install Python dependencies
+# Activate — Windows CMD:
+.venv\Scripts\activate
+
+# Activate — Windows PowerShell:
+.venv\Scripts\Activate.ps1
+```
+
+### 2. Install dependencies
+
+```bash
 pip install -r requirements.txt
 ```
 
-### 2. Install Ollama + pull the model
+### 3. Get your free Gemini API key
+
+- Go to → https://aistudio.google.com/apikey
+- Sign in with Google
+- Click **Create API Key**
+- Copy the key (starts with `AIza...`)
+
+### 4. Set your API key
 
 ```bash
-# Install Ollama (visit https://ollama.com for GUI installer, or):
-curl -fsSL https://ollama.com/install.sh | sh   # Linux
-# macOS: download from https://ollama.com/download
+# Windows CMD:
+set GEMINI_API_KEY=AIza...your-key-here...
 
-# Pull Gemma 3 4B (~3 GB download)
-ollama pull gemma3:4b
+# Windows PowerShell:
+$env:GEMINI_API_KEY="AIza...your-key-here..."
 
-# Start Ollama server (leave this running in a separate terminal)
-ollama serve
+# Mac/Linux:
+export GEMINI_API_KEY=AIza...your-key-here...
 ```
 
-### 3. Start Sindhu
+### 5. Start Sindhu
 
 ```bash
 cd backend
-uvicorn main:app --reload --port 8000
+uvicorn main:app --reload --port 8001
 ```
 
-### 4. Open the app
+### 6. Open in browser
 
-→ **http://localhost:8000**
-
----
-
-## 🔬 Alternative: HuggingFace Backend
-
-Use this if you want to load the model directly without Ollama.
-
-```bash
-# Install extra dependencies
-pip install transformers accelerate torch
-pip install bitsandbytes   # GPU only (4-bit quantization)
-
-# Set the backend
-export SINDHU_BACKEND=hf              # macOS/Linux
-set SINDHU_BACKEND=hf                 # Windows CMD
-$env:SINDHU_BACKEND="hf"             # PowerShell
-
-# Optionally change the model (default: google/gemma-3-4b-it)
-export HF_MODEL_ID=mistralai/Mistral-7B-Instruct-v0.3
-
-# Start
-cd backend
-uvicorn main:app --reload --port 8000
-```
-
-> ⚠️ First run downloads model weights (~3–8 GB). Be patient.
-
----
-
-## ⚙️ Environment Variables
-
-| Variable | Default | Description |
-|---|---|---|
-| `SINDHU_BACKEND` | `ollama` | `ollama` or `hf` |
-| `OLLAMA_BASE_URL` | `http://localhost:11434` | Ollama server address |
-| `OLLAMA_MODEL` | `gemma3:4b` | Any model pulled in Ollama |
-| `HF_MODEL_ID` | `google/gemma-3-4b-it` | HuggingFace model ID |
+→ **http://localhost:8001**
 
 ---
 
 ## 🧪 Example Test
 
-### Via the UI
-1. Open http://localhost:8000
-2. Paste a YouTube URL (English captions work best), e.g.:
-   ```
-   https://www.youtube.com/watch?v=dQw4w9WgXcQ
-   ```
-3. Click **خلاصو ڪريو ▶**
-4. Wait ~20–60 seconds (local inference is slower than cloud APIs)
-5. Toggle between **سنڌي** and **English** views
+Paste any YouTube URL with English captions, e.g.:
+```
+https://www.youtube.com/watch?v=dQw4w9WgXcQ
+```
 
-### Via curl
+Click **خلاصو ڪريو ▶** and wait 5–15 seconds for results.
+
+### curl test
 ```bash
-curl -X POST http://localhost:8000/summarize \
+curl -X POST http://localhost:8001/summarize \
   -H "Content-Type: application/json" \
   -d '{"url": "https://www.youtube.com/watch?v=dQw4w9WgXcQ"}'
 ```
 
 ---
 
-## ⚠️ Error Cases Handled
+## ⚠️ Common Errors & Fixes
 
-| Situation | Message |
+| Error | Fix |
 |---|---|
-| Invalid URL | "Invalid YouTube URL" |
-| No captions | "No transcript found" |
-| Private video | "Video is unavailable" |
-| Ollama not running | "Ollama request failed. Start with: ollama serve" |
-| HF deps missing | "Install: transformers accelerate torch" |
-| Malformed JSON from model | "Model returned malformed JSON — try again" |
+| `Could not import module "main"` | Make sure you `cd backend` before running uvicorn |
+| `GEMINI_API_KEY is not set` | Run `set GEMINI_API_KEY=AIza...` in the same terminal before uvicorn |
+| `503 UNAVAILABLE` | Gemini servers busy — auto-retries 3 times, or wait a minute |
+| `429 rate limit` | Free tier limit hit — wait a few minutes and try again |
+| `No transcript found` | Video has no captions — try a different video |
+| `429 Too Many Requests` (YouTube) | YouTube rate limiting your IP — wait 2–5 minutes |
+| `Page not found 404` | Wrong port — make sure you're on http://localhost:8001 |
+
+---
+
+## 🎨 Features
+
+- ✅ 3 bullet-point summary in Sindhi (MB Lateef font)
+- ✅ Short paragraph explanation in Sindhi
+- ✅ Language toggle — switch between سنڌي and English
+- ✅ Collapsible transcript preview
+- ✅ Auto-retry on Gemini rate limits and server errors
+- ✅ Long transcript chunking → multi-pass summarization
+- ✅ Ajrak-inspired RTL Sindhi UI
+
+---
+
+## 🔌 API
+
+### `POST /summarize`
+```json
+{ "url": "https://www.youtube.com/watch?v=..." }
+```
+
+Response:
+```json
+{
+  "bullet_summary_sindhi": ["...", "...", "..."],
+  "explanation_sindhi": "...",
+  "bullet_summary_english": ["...", "...", "..."],
+  "explanation_english": "...",
+  "transcript_preview": "..."
+}
+```
+
+### `GET /health`
+```json
+{ "status": "ok" }
+```
 
 ---
 
 ## 💡 Tips
 
-- **Speed:** Ollama with GPU is fastest (~10–20s). CPU-only expect 1–3 minutes.
-- **Quality:** If Sindhi output looks off, try `ollama pull gemma3:12b` and set `OLLAMA_MODEL=gemma3:12b` for better multilingual quality.
-- **Deactivate venv:** `deactivate`
+- **Best videos to test:** TED Talks, BBC, educational channels — they always have captions
+- **Key not working?** Set it in the **same terminal** window before running uvicorn
+- **Deactivate venv when done:** `deactivate`
+- **Free tier limits:** 500 requests/day, 10 requests/minute on Gemini free tier
