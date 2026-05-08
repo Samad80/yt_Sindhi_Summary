@@ -69,6 +69,15 @@ def _get_transcript_text(video_id: str) -> str:
         except Exception:
             pass
 
+    # Priority 4: any language as-is (fallback — LLM can still summarize)
+    if not transcript:
+        try:
+            available = list(transcript_list)
+            if available:
+                transcript = available[0]
+        except Exception:
+            pass
+
     if not transcript:
         raise Exception("No transcript available for this video.")
 
