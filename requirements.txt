@@ -1,0 +1,16 @@
+# ── Core ──────────────────────────────────────────────────────────────────────
+fastapi==0.115.5
+uvicorn[standard]==0.32.1
+youtube-transcript-api==0.6.3
+pydantic==2.10.1
+python-multipart==0.0.17
+
+# ── Backend Option A: Ollama (recommended — install Ollama separately) ────────
+# No extra pip packages needed. Ollama talks over HTTP.
+# Install: https://ollama.com  →  ollama pull gemma3:4b
+
+# ── Backend Option B: HuggingFace Transformers (uncomment to use) ─────────────
+# transformers==4.51.3
+# accelerate==1.6.0
+# bitsandbytes==0.45.5      # 4-bit quantization (GPU only)
+# torch==2.7.0              # or install via: https://pytorch.org/get-started
