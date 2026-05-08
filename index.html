@@ -691,7 +691,7 @@
   function setLoading(on) {
     if (on) {
       show('loadingState');
-      hide('errorState');
+      hide('friendlyPrompt');
       hide('results');
       document.getElementById('submitBtn').disabled = true;
       loadingMsgIndex = 0;
@@ -707,11 +707,11 @@
     }
   }
 
-  function showError(msg) {
+  function showFriendlyPrompt(msg) {
     hide('loadingState');
     hide('results');
-    document.getElementById('errorMsg').textContent = msg;
-    show('errorState');
+    document.getElementById('friendlyMsg').textContent = msg || 'مهرباني ڪري ڪا ٻي يوٽيوب ويڊيو جو لنڪ ڏيو.';
+    show('friendlyPrompt');
   }
 
   // ── Language Toggle ───────────────────────────────────────────────────────
@@ -787,12 +787,12 @@
     const url = document.getElementById('urlInput').value.trim();
 
     if (!url) {
-      showError('Please enter a YouTube URL first.');
+      showFriendlyPrompt('مهرباني ڪري يوٽيوب ويڊيو جو لنڪ لکو.');
       return;
     }
 
     if (!url.includes('youtube.com') && !url.includes('youtu.be')) {
-      showError('This does not look like a YouTube URL. Please check and try again.');
+      showFriendlyPrompt('مهرباني ڪري صحيح يوٽيوب لنڪ ڏيو.');
       return;
     }
 
@@ -807,9 +807,9 @@
 
       const data = await response.json();
 
-      if (!response.ok) {
-        const detail = data.detail || 'An unexpected error occurred.';
-        showError(detail);
+      // Show friendly prompt if backend flagged an error
+      if (data.error) {
+        showFriendlyPrompt(data.error);
         return;
       }
 
@@ -829,7 +829,7 @@
       show('results');
 
     } catch (err) {
-      showError('Network error: Could not reach the server. Make sure the backend is running.');
+      showFriendlyPrompt('مهرباني ڪري ڪا ٻي يوٽيوب ويڊيو جو لنڪ ڏيو.');
     } finally {
       setLoading(false);
     }
@@ -838,7 +838,7 @@
   // Allow Enter key to submit
   document.getElementById('urlInput').addEventListener('keydown', (e) => {
     if (e.key === 'Enter') handleSubmit();
-});
+  });
 </script>
 </body>
 </html>
