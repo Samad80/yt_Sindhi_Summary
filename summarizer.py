@@ -75,7 +75,7 @@ Start your response with {{ and end with }}. Nothing before or after.
 
 def _call_gemini(prompt: str, max_tokens: int = 2000) -> str:
     """Call Gemini API with automatic retry on 429 rate limit errors."""
-    api_key = api_key 
+    api_key = "AIzaSyCHGVmWyXFJHzdduhul-7K_5GfaBD-0wdo"
 
     url = f"{GEMINI_API_URL}?key={api_key}"
 
