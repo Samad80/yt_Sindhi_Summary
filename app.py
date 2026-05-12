@@ -1,6 +1,11 @@
 """
 YouTube Video Summarizer in Sindhi — Sindhu
-FastAPI Backend — Main Entry Point
+FastAPI Backend — HuggingFace Spaces Entry Point
+
+HF Spaces requires:
+  - Entry file named app.py
+  - App listening on port 7860
+  - GEMINI_API_KEY set via HF Secrets (Settings → Variables and Secrets)
 """
 
 from fastapi import FastAPI
@@ -72,6 +77,18 @@ async def summarize(request: SummarizeRequest):
     if not url:
         return empty
 
+    # Check API key is configured
+    if not os.environ.get("GEMINI_API_KEY"):
+        logger.error("GEMINI_API_KEY not set! Add it in HF Spaces Settings → Secrets.")
+        return SummarizeResponse(
+            bullet_summary_sindhi=[],
+            explanation_sindhi="",
+            bullet_summary_english=[],
+            explanation_english="",
+            transcript_preview="",
+            error="Server configuration error: API key not set. See Space README for setup instructions.",
+        )
+
     # Step 1: Extract transcript
     logger.info("Extracting transcript...")
     transcript_result = extract_transcript(url)
@@ -104,3 +121,12 @@ async def summarize(request: SummarizeRequest):
 @app.get("/health")
 async def health():
     return {"status": "ok"}
+
+
+# ── HuggingFace Spaces entry point ────────────────────────────────────────────
+# HF Spaces runs: uvicorn app:app --host 0.0.0.0 --port 7860
+# But if running locally: python app.py
+if __name__ == "__main__":
+    import uvicorn
+    port = int(os.environ.get("PORT", 7860))
+    uvicorn.run("app:app", host="0.0.0.0", port=port, reload=False)
