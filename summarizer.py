@@ -2,11 +2,13 @@
 summarizer.py — Sindhu
 ──────────────────────
 Uses Google Gemini API (free tier) for summarization + Sindhi translation.
-Model: gemini-2.5-flash (current free model as of 2026)
+Model: gemini-2.5-flash
 
 Free tier limits: 10 RPM, 500 RPD — plenty for personal use.
 Get your free API key: https://aistudio.google.com/apikey
-Set GEMINI_API_KEY environment variable before running.
+
+For HuggingFace Spaces:
+  Add GEMINI_API_KEY in → Settings → Variables and Secrets → New Secret
 """
 
 import os
@@ -75,16 +77,22 @@ Start your response with {{ and end with }}. Nothing before or after.
 
 def _call_gemini(prompt: str, max_tokens: int = 2000) -> str:
     """Call Gemini API with automatic retry on 429 rate limit errors."""
-    api_key = "AIzaSyCHGVmWyXFJHzdduhul-7K_5GfaBD-0wdo"
+    api_key = os.environ.get("GEMINI_API_KEY", "").strip()
+    if not api_key:
+        raise RuntimeError(
+            "GEMINI_API_KEY is not set.\n"
+            "For HuggingFace Spaces: go to Settings → Variables and Secrets → New Secret\n"
+            "For local: export GEMINI_API_KEY=AIza..."
+        )
 
     url = f"{GEMINI_API_URL}?key={api_key}"
 
     payload = json.dumps({
         "contents": [{"parts": [{"text": prompt}]}],
         "generationConfig": {
-            "temperature":        0.1,      # Very low temp = more predictable JSON
+            "temperature":        0.1,
             "maxOutputTokens":    max_tokens,
-            "responseMimeType":   "application/json",  # Force JSON output mode
+            "responseMimeType":   "application/json",
         },
     }).encode()
 
@@ -98,7 +106,6 @@ def _call_gemini(prompt: str, max_tokens: int = 2000) -> str:
             )
             with urllib.request.urlopen(req, timeout=60) as resp:
                 result = json.loads(resp.read().decode())
-                # Extract text from response
                 text = result["candidates"][0]["content"]["parts"][0]["text"].strip()
                 logger.info(f"Gemini raw response (first 200 chars): {text[:200]}")
                 return text
@@ -116,7 +123,7 @@ def _call_gemini(prompt: str, max_tokens: int = 2000) -> str:
                     "Try again in a few minutes."
                 )
             if e.code == 403:
-                raise RuntimeError("Invalid Gemini API key. Check your GEMINI_API_KEY.")
+                raise RuntimeError("Invalid Gemini API key. Check your GEMINI_API_KEY secret in HF Spaces Settings.")
             raise RuntimeError(f"Gemini API error {e.code}: {body}")
 
     raise RuntimeError("Gemini request failed after all retries.")
@@ -127,11 +134,7 @@ def _call_gemini(prompt: str, max_tokens: int = 2000) -> str:
 def _parse_json(raw: str) -> dict:
     """
     Robustly parse JSON from Gemini output.
-    Handles:
-      - Clean JSON
-      - ```json ... ``` fences
-      - Thinking/preamble text before the JSON object
-      - Trailing text after the JSON object
+    Handles clean JSON, ```json fences, preamble text, trailing text.
     """
     cleaned = raw.strip()
 
@@ -139,15 +142,14 @@ def _parse_json(raw: str) -> dict:
     cleaned = re.sub(r"^```[a-z]*\n?", "", cleaned)
     cleaned = re.sub(r"\n?```$",       "", cleaned).strip()
 
-    # 2. If it starts with { we're good — try direct parse first
+    # 2. Direct parse if starts with {
     if cleaned.startswith("{"):
         try:
             return json.loads(cleaned)
         except json.JSONDecodeError:
             pass
 
-    # 3. Find the JSON object anywhere in the text (handles preamble/thinking text)
-    # Use a greedy match to get the largest possible JSON block
+    # 3. Find JSON object anywhere in the text
     match = re.search(r"\{[\s\S]*\}", cleaned)
     if match:
         try:
@@ -155,10 +157,8 @@ def _parse_json(raw: str) -> dict:
         except json.JSONDecodeError:
             pass
 
-    # 4. Last resort — try to find and fix common issues
-    # Sometimes Gemini wraps in extra quotes or adds trailing commas
+    # 4. Fix trailing commas and retry
     try:
-        # Remove trailing commas before } or ]
         fixed = re.sub(r",\s*([}\]])", r"\1", cleaned)
         match = re.search(r"\{[\s\S]*\}", fixed)
         if match:
@@ -181,12 +181,10 @@ def summarize_and_translate(transcript: str) -> dict:
     }
 
     try:
-        # Short transcript — single call
         if len(transcript) <= MAX_DIRECT_CHARS:
             logger.info("Short transcript: single Gemini call.")
             input_text = transcript
         else:
-            # Long transcript — chunk first
             logger.info(f"Long transcript ({len(transcript)} chars): chunking...")
             chunks = chunk_transcript(transcript, chunk_size=CHUNK_SIZE)
             logger.info(f"{len(chunks)} chunks created.")
@@ -198,7 +196,7 @@ def summarize_and_translate(transcript: str) -> dict:
                     CHUNK_SUMMARY_PROMPT.format(chunk=chunk),
                     max_tokens=400,
                 ))
-                time.sleep(2)  # Stay within RPM limit
+                time.sleep(2)
 
             input_text = (
                 "Section-by-section summaries — synthesize into one:\n\n"
@@ -206,7 +204,6 @@ def summarize_and_translate(transcript: str) -> dict:
             )
             logger.info("Chunks done. Final synthesis...")
 
-        # Final call
         raw = _call_gemini(
             FINAL_SUMMARY_PROMPT.format(transcript=input_text),
             max_tokens=2000,
@@ -214,13 +211,11 @@ def summarize_and_translate(transcript: str) -> dict:
         logger.info("Parsing JSON...")
         parsed = _parse_json(raw)
 
-        # Validate required keys
         for key in ("bullet_summary_english", "explanation_english",
                     "bullet_summary_sindhi",  "explanation_sindhi"):
             if key not in parsed:
                 raise ValueError(f"Missing key in response: '{key}'")
 
-        # Ensure exactly 3 bullets
         for field in ("bullet_summary_english", "bullet_summary_sindhi"):
             while len(parsed[field]) < 3:
                 parsed[field].append("—")
